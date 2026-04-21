@@ -5,7 +5,7 @@ export async function onRequest(context) {
   const origin = url.origin;
 
   const match = url.pathname.match(/^\/(\d{4})(\/|$)/);
-  const year = match ? match[1] : "2012";
+  const year = match ? match[1] : "2014";
 
   const MIRROR_BASE = origin + "/" + year;
 

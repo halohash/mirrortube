@@ -3,7 +3,11 @@ export async function onRequest(context) {
   const url = new URL(request.url);
 
   const origin = url.origin;
-  const MIRROR_BASE = origin + "/2013";
+
+  const match = url.pathname.match(/^\/(\d{4})(\/|$)/);
+  const year = match ? match[1] : "2013";
+
+  const MIRROR_BASE = origin + "/" + year;
 
   const fullUrl = url.pathname + url.search;
   if (/\.swf(\?|$)/i.test(fullUrl)) {
@@ -14,14 +18,14 @@ export async function onRequest(context) {
 
   const now = new Date();
   const timestamp =
-    "2013" +
+    year +
     String(now.getUTCMonth() + 1).padStart(2, "0") +
     String(now.getUTCDate()).padStart(2, "0") +
     String(now.getUTCHours()).padStart(2, "0") +
     String(now.getUTCMinutes()).padStart(2, "0") +
     String(now.getUTCSeconds()).padStart(2, "0");
 
-  const base = "/2013";
+  const base = "/" + year;
   let path = url.pathname.startsWith(base)
     ? url.pathname.slice(base.length)
     : url.pathname;
