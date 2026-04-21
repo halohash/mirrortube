@@ -2,12 +2,9 @@ export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
 
-  const MIRROR_BASE = "https://mirrortube.pages.dev/2013";
-
-  // ===== Root redirect (optional) =====
-  if (url.pathname === "/") {
-    return Response.redirect(MIRROR_BASE + "/", 302);
-  }
+  // ✅ dynamic base (NO HARDCODING)
+  const origin = url.origin;
+  const MIRROR_BASE = origin + "/2013";
 
   // ===== SWF HARD OVERRIDE =====
   const fullUrl = url.pathname + url.search;
@@ -27,8 +24,8 @@ export async function onRequest(context) {
     String(now.getUTCMinutes()).padStart(2, "0") +
     String(now.getUTCSeconds()).padStart(2, "0");
 
-  // ===== Strip base =====
-  const base = "/mirrortube/2013";
+  // ===== Strip /2013 prefix =====
+  const base = "/2013";
   let path = url.pathname.startsWith(base)
     ? url.pathname.slice(base.length)
     : url.pathname;
@@ -50,9 +47,10 @@ export async function onRequest(context) {
       },
     });
   } catch {
-    return new Response(JSON.stringify({ error: "fetch failed", target }), {
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({ error: "fetch failed", target }),
+      { status: 500 }
+    );
   }
 
   // ===== Headers =====
@@ -91,19 +89,14 @@ export async function onRequest(context) {
 
     // Wayback → mirror
     text = text.replace(
-      /https:\/\/web\.archive\.org\/web\/\d+id_\/http:\/\/www\.youtube\.com/gi,
-      MIRROR_BASE
-    );
-
-    text = text.replace(
-      /\/\/web\.archive\.org\/web\/\d+id_\/http:\/\/www\.youtube\.com/gi,
-      MIRROR_BASE
+      /(href|action)=["']https:\/\/web\.archive\.org\/web\/\d+id_\/http:\/\/www\.youtube\.com/gi,
+      `$1="${MIRROR_BASE}`
     );
 
     // YouTube → mirror
     text = text.replace(
-      /https?:\/\/www\.youtube\.com/gi,
-      MIRROR_BASE
+      /(href|action)=["']https?:\/\/www\.youtube\.com/gi,
+      `$1="${MIRROR_BASE}`
     );
 
     // 🔥 FIX http:// assets
@@ -129,7 +122,7 @@ export async function onRequest(context) {
       "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf"
     );
 
-    // root-relative → absolute mirror
+    // root-relative → /2013
     text = text.replace(/href="\//gi, `href="${MIRROR_BASE}/`);
     text = text.replace(/src="\//gi, `src="${MIRROR_BASE}/`);
 
@@ -161,8 +154,8 @@ export async function onRequest(context) {
     );
 
     text = text.replace(
-      /\/\/([^"'\s]+)/gi,
-      `https://web.archive.org/web/${timestamp}id_/http://$1`
+      /(["'=])\/\/([^"'\s]+)/gi,
+      `$1https://web.archive.org/web/${timestamp}id_/http://$2`
     );
 
     return new Response(text, {
