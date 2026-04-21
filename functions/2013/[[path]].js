@@ -10,8 +10,6 @@ export async function onRequest(context) {
   const MIRROR_BASE = origin + "/" + year;
   const SWF_PROXY = `/${year}/__swf_proxy`;
 
-  const fullUrl = url.pathname + url.search;
-
   if (url.pathname.startsWith(SWF_PROXY)) {
     return fetch("https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf", {
       headers: {
@@ -19,6 +17,8 @@ export async function onRequest(context) {
       }
     });
   }
+
+  const fullUrl = url.pathname + url.search;
 
   if (/\.swf(\?|$)/i.test(fullUrl)) {
     return fetch("https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf");
@@ -74,6 +74,10 @@ export async function onRequest(context) {
 
   const contentType = headers.get("content-type") || "";
 
+  const YT_SWF_REGEX = /https?:\/\/[^"'\s]*ytimg\.com\/[^"'\s]*\.swf(\?[^"'\s]*)?/gi;
+  const YT_SWF_REGEX_PROTO = /\/\/[^"'\s]*ytimg\.com\/[^"'\s]*\.swf(\?[^"'\s]*)?/gi;
+  const WAYBACK_SWF_REGEX = /web\.archive\.org\/web\/\d+[^"'\s]*ytimg\.com\/[^"'\s]*\.swf(\?[^"'\s]*)?/gi;
+
   if (contentType.includes("text/html")) {
     let text = await res.text();
 
@@ -100,20 +104,9 @@ export async function onRequest(context) {
       `$1https://web.archive.org/web/${timestamp}id_/http://$2`
     );
 
-    text = text.replace(
-      /https?:\/\/[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
-      `${MIRROR_BASE}${SWF_PROXY}$1`
-    );
-
-    text = text.replace(
-      /\/\/[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
-      `${MIRROR_BASE}${SWF_PROXY}$1`
-    );
-
-    text = text.replace(
-      /web\.archive\.org\/web\/\d+[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
-      `${MIRROR_BASE}${SWF_PROXY}$1`
-    );
+    text = text.replace(YT_SWF_REGEX, `${MIRROR_BASE}${SWF_PROXY}$1`);
+    text = text.replace(YT_SWF_REGEX_PROTO, `${MIRROR_BASE}${SWF_PROXY}$1`);
+    text = text.replace(WAYBACK_SWF_REGEX, `${MIRROR_BASE}${SWF_PROXY}$1`);
 
     text = text.replace(/href="\//gi, `href="${MIRROR_BASE}/`);
     text = text.replace(/src="\//gi, `src="${MIRROR_BASE}/`);
@@ -147,15 +140,8 @@ export async function onRequest(context) {
       `$1https://web.archive.org/web/${timestamp}id_/http://$2`
     );
 
-    text = text.replace(
-      /https?:\/\/[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
-      `${MIRROR_BASE}${SWF_PROXY}$1`
-    );
-
-    text = text.replace(
-      /web\.archive\.org\/web\/\d+[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
-      `${MIRROR_BASE}${SWF_PROXY}$1`
-    );
+    text = text.replace(YT_SWF_REGEX, `${MIRROR_BASE}${SWF_PROXY}$1`);
+    text = text.replace(WAYBACK_SWF_REGEX, `${MIRROR_BASE}${SWF_PROXY}$1`);
 
     return new Response(text, {
       status: res.status,
