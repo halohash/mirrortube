@@ -8,12 +8,20 @@ export async function onRequest(context) {
   const year = match ? match[1] : "2014";
 
   const MIRROR_BASE = origin + "/" + year;
+  const SWF_PROXY = `/${year}/__swf_proxy`;
 
   const fullUrl = url.pathname + url.search;
+
+  if (url.pathname.startsWith(SWF_PROXY)) {
+    return fetch("https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf", {
+      headers: {
+        "User-Agent": request.headers.get("user-agent") || "Mozilla/5.0"
+      }
+    });
+  }
+
   if (/\.swf(\?|$)/i.test(fullUrl)) {
-    return fetch(
-      "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf"
-    );
+    return fetch("https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf");
   }
 
   const now = new Date();
@@ -41,15 +49,13 @@ export async function onRequest(context) {
   try {
     res = await fetch(target, {
       headers: {
-        "User-Agent":
-          request.headers.get("user-agent") || "Mozilla/5.0",
-      },
+        "User-Agent": request.headers.get("user-agent") || "Mozilla/5.0"
+      }
     });
   } catch {
-    return new Response(
-      JSON.stringify({ error: "fetch failed", target }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "fetch failed", target }), {
+      status: 500
+    });
   }
 
   const headers = new Headers(res.headers);
@@ -61,16 +67,7 @@ export async function onRequest(context) {
 
   headers.set(
     "content-security-policy",
-    `
-    default-src * data: blob: 'unsafe-inline' 'unsafe-eval';
-    script-src * data: blob: 'unsafe-inline' 'unsafe-eval';
-    style-src * data: blob: 'unsafe-inline';
-    img-src * data: blob:;
-    frame-src *;
-    connect-src *;
-    media-src *;
-    font-src * data:;
-    `.replace(/\s+/g, " ").trim()
+    `default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; script-src * data: blob: 'unsafe-inline' 'unsafe-eval'; style-src * data: blob: 'unsafe-inline'; img-src * data: blob:; frame-src *; connect-src *; media-src *; font-src * data:;`
   );
 
   headers.set("access-control-allow-origin", "*");
@@ -104,13 +101,18 @@ export async function onRequest(context) {
     );
 
     text = text.replace(
-      /https?:\/\/[^"'\s]+\.swf/gi,
-      "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf"
+      /https?:\/\/[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
+      `${MIRROR_BASE}${SWF_PROXY}$1`
     );
 
     text = text.replace(
-      /\/\/[^"'\s]+\.swf/gi,
-      "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf"
+      /\/\/[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
+      `${MIRROR_BASE}${SWF_PROXY}$1`
+    );
+
+    text = text.replace(
+      /web\.archive\.org\/web\/\d+[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
+      `${MIRROR_BASE}${SWF_PROXY}$1`
     );
 
     text = text.replace(/href="\//gi, `href="${MIRROR_BASE}/`);
@@ -128,7 +130,7 @@ export async function onRequest(context) {
 
     return new Response(text, {
       status: res.status,
-      headers,
+      headers
     });
   }
 
@@ -145,9 +147,19 @@ export async function onRequest(context) {
       `$1https://web.archive.org/web/${timestamp}id_/http://$2`
     );
 
+    text = text.replace(
+      /https?:\/\/[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
+      `${MIRROR_BASE}${SWF_PROXY}$1`
+    );
+
+    text = text.replace(
+      /web\.archive\.org\/web\/\d+[^"'\s]+\/watch[^"'\s]*\.swf(\?[^"'\s]*)?/gi,
+      `${MIRROR_BASE}${SWF_PROXY}$1`
+    );
+
     return new Response(text, {
       status: res.status,
-      headers,
+      headers
     });
   }
 
@@ -166,12 +178,12 @@ export async function onRequest(context) {
 
     return new Response(text, {
       status: res.status,
-      headers,
+      headers
     });
   }
 
   return new Response(res.body, {
     status: res.status,
-    headers,
+    headers
   });
 }
