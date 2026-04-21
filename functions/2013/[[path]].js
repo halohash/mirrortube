@@ -2,11 +2,9 @@ export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
 
-  // ✅ dynamic base (NO HARDCODING)
   const origin = url.origin;
   const MIRROR_BASE = origin + "/2013";
 
-  // ===== SWF HARD OVERRIDE =====
   const fullUrl = url.pathname + url.search;
   if (/\.swf(\?|$)/i.test(fullUrl)) {
     return fetch(
@@ -14,7 +12,6 @@ export async function onRequest(context) {
     );
   }
 
-  // ===== Timestamp =====
   const now = new Date();
   const timestamp =
     "2013" +
@@ -24,7 +21,6 @@ export async function onRequest(context) {
     String(now.getUTCMinutes()).padStart(2, "0") +
     String(now.getUTCSeconds()).padStart(2, "0");
 
-  // ===== Strip /2013 prefix =====
   const base = "/2013";
   let path = url.pathname.startsWith(base)
     ? url.pathname.slice(base.length)
@@ -32,7 +28,6 @@ export async function onRequest(context) {
 
   if (!path || path === "/") path = "";
 
-  // ===== Target =====
   const target =
     `https://web.archive.org/web/${timestamp}id_/http://www.youtube.com` +
     path +
@@ -53,7 +48,6 @@ export async function onRequest(context) {
     );
   }
 
-  // ===== Headers =====
   const headers = new Headers(res.headers);
 
   headers.delete("content-security-policy");
@@ -79,39 +73,32 @@ export async function onRequest(context) {
 
   const contentType = headers.get("content-type") || "";
 
-  // ===== HTML =====
   if (contentType.includes("text/html")) {
     let text = await res.text();
 
-    // remove Wayback UI
     text = text.replace(/<div id="wm-ipp".*?<\/div>/gis, "");
     text = text.replace(/<script[^>]*archive\.org[^>]*><\/script>/gi, "");
 
-    // Wayback → mirror
     text = text.replace(
       /(href|action)=["']https:\/\/web\.archive\.org\/web\/\d+id_\/http:\/\/www\.youtube\.com/gi,
       `$1="${MIRROR_BASE}`
     );
 
-    // YouTube → mirror
     text = text.replace(
       /(href|action)=["']https?:\/\/www\.youtube\.com/gi,
       `$1="${MIRROR_BASE}`
     );
 
-    // 🔥 FIX http:// assets
     text = text.replace(
       /(["'=])http:\/\/([^"'\s]+)/gi,
       `$1https://web.archive.org/web/${timestamp}id_/http://$2`
     );
 
-    // 🔥 FIX // assets
     text = text.replace(
       /(["'=])\/\/([^"'\s]+)/gi,
       `$1https://web.archive.org/web/${timestamp}id_/http://$2`
     );
 
-    // 🔥 SWF replace
     text = text.replace(
       /https?:\/\/[^"'\s]+\.swf/gi,
       "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf"
@@ -122,17 +109,14 @@ export async function onRequest(context) {
       "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf"
     );
 
-    // root-relative → /2013
     text = text.replace(/href="\//gi, `href="${MIRROR_BASE}/`);
     text = text.replace(/src="\//gi, `src="${MIRROR_BASE}/`);
 
-    // forms
     text = text.replace(
       /action="\/([^"]*)"/gi,
       `action="${MIRROR_BASE}/$1"`
     );
 
-    // base tag
     text = text.replace(
       /<head>/i,
       `<head><base href="${MIRROR_BASE}/">`
@@ -144,7 +128,6 @@ export async function onRequest(context) {
     });
   }
 
-  // ===== JS =====
   if (contentType.includes("javascript")) {
     let text = await res.text();
 
@@ -164,7 +147,6 @@ export async function onRequest(context) {
     });
   }
 
-  // ===== CSS =====
   if (contentType.includes("text/css")) {
     let text = await res.text();
 
@@ -184,7 +166,6 @@ export async function onRequest(context) {
     });
   }
 
-  // ===== everything else =====
   return new Response(res.body, {
     status: res.status,
     headers,
