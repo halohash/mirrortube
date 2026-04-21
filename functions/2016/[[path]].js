@@ -11,17 +11,23 @@ export async function onRequest(context) {
   const SWF_PROXY = `/${year}/__swf_proxy`;
 
   if (url.pathname.startsWith(SWF_PROXY)) {
-    return fetch("https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf", {
-      headers: {
-        "User-Agent": request.headers.get("user-agent") || "Mozilla/5.0"
+    return fetch(
+      "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf" +
+        url.search,
+      {
+        headers: {
+          "User-Agent": request.headers.get("user-agent") || "Mozilla/5.0"
+        }
       }
-    });
+    );
   }
 
   const fullUrl = url.pathname + url.search;
 
   if (/\.swf(\?|$)/i.test(fullUrl)) {
-    return fetch("https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf");
+    return fetch(
+      "https://file.garden/aUYIWVAKvQxCBY-_/database/swf/watch_as3-vflMmYdk4.swf"
+    );
   }
 
   const now = new Date();
@@ -107,6 +113,23 @@ export async function onRequest(context) {
     text = text.replace(YT_SWF_REGEX, `${MIRROR_BASE}${SWF_PROXY}$1`);
     text = text.replace(YT_SWF_REGEX_PROTO, `${MIRROR_BASE}${SWF_PROXY}$1`);
     text = text.replace(WAYBACK_SWF_REGEX, `${MIRROR_BASE}${SWF_PROXY}$1`);
+
+    text = text.replace(
+      /ytplayer\.config\s*=\s*({[\s\S]*?});/,
+      (match, json) => {
+        try {
+          const obj = JSON.parse(json);
+          if (obj.assets) {
+            obj.assets.swf = `${MIRROR_BASE}/__swf_proxy`;
+          }
+          return "ytplayer.config = " +
+            JSON.stringify(obj).replace(/\\\//g, "/").replace(/\\\\/g, "\\") +
+            ";";
+        } catch {
+          return match;
+        }
+      }
+    );
 
     text = text.replace(/href="\//gi, `href="${MIRROR_BASE}/`);
     text = text.replace(/src="\//gi, `src="${MIRROR_BASE}/`);
