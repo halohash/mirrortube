@@ -84,6 +84,11 @@ export async function onRequest(context) {
   const YT_SWF_REGEX_PROTO = /\/\/[^"'\s]*ytimg\.com\/[^"'\s]*\.swf(\?[^"'\s]*)?/gi;
   const WAYBACK_SWF_REGEX = /web\.archive\.org\/web\/\d+[^"'\s]*ytimg\.com\/[^"'\s]*\.swf(\?[^"'\s]*)?/gi;
 
+  const OBF_SWF_REGEX = new RegExp(
+    's\\\\u0072c=\\\\\\"http:\\\\/\\\\/\\\\/s\\.ytimg\\.com\\\\/[^"]+watch_as3\\.swf\\\\\\"',
+    'gi'
+  );
+
   if (contentType.includes("text/html")) {
     let text = await res.text();
 
@@ -120,14 +125,8 @@ export async function onRequest(context) {
         try {
           const obj = JSON.parse(json);
 
-          if (obj.assets) {
-            obj.assets.swf = `${MIRROR_BASE}/__swf_proxy`;
-          }
-
-          if (obj.url) {
-            obj.url = `${MIRROR_BASE}/__swf_proxy`;
-          }
-
+          if (obj.assets) obj.assets.swf = `${MIRROR_BASE}/__swf_proxy`;
+          if (obj.url) obj.url = `${MIRROR_BASE}/__swf_proxy`;
           if (obj.args && obj.args.iv_module) {
             obj.args.iv_module = `${MIRROR_BASE}/__swf_proxy`;
           }
@@ -142,7 +141,7 @@ export async function onRequest(context) {
     );
 
     text = text.replace(
-      /s\\u0072c=\\"http:\\/\\/s\.ytimg\.com\/[^"]+watch_as3\.swf\\"/gi,
+      OBF_SWF_REGEX,
       `src=\\"${MIRROR_BASE}/__swf_proxy\\"`
     );
 
@@ -187,7 +186,7 @@ export async function onRequest(context) {
     text = text.replace(WAYBACK_SWF_REGEX, `${MIRROR_BASE}${SWF_PROXY}$1`);
 
     text = text.replace(
-      /s\\u0072c=\\"http:\\/\\/s\.ytimg\.com\/[^"]+watch_as3\.swf\\"/gi,
+      OBF_SWF_REGEX,
       `src=\\"${MIRROR_BASE}/__swf_proxy\\"`
     );
 
